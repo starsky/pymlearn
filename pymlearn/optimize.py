@@ -2,10 +2,31 @@
 import numpy as np
 import scipy.optimize
 from functools import partial
+import core
+import theano
+from lasagne.updates import sgd
 __author__ = 'mkopersk'
 
+def gradient_descend_theano(fun, x0, args=None, learning_rate=1e-3, tol=1e-3, max_iter=3000, 
+        verbose=True):
+    funct, trainable_params, non_trainable_params = fun
+    updates = sgd(funct, trainable_params, learning_rate=learning_rate)
+    train_fun = theano.function(non_trainable_params, funct, updates=updates)
+    loss_fn_compiled = theano.function(non_trainable_params, funct)
+    old_loss = np.inf
+    for i in range(max_iter):
+        train_fun(*args)
+        curr_loss =  loss_fn_compiled(*args)
+        if abs(curr_loss - old_loss) < tol:
+            break
+        old_loss = curr_loss
+        if verbose and i % 100 == 0:
+            print '%d\t%f' % (i, curr_loss)
+    params_optimal = trainable_params[0].get_value()
+    return {'x': params_optimal}
 
-def gradient_descend(fun, x0, args=None, jac=None, learning_rate=1e-3, tol=1e-3, max_iter=1000, verbose=True):
+ 
+def gradient_descend(fun, x0, args=None, jac=None, learning_rate=1e-3, tol=1e-3, max_iter=1000, verbose=True):    
     old_loss = np.inf
     if jac is None:
         jac = lambda params: compute_partial_derivatives_numerical(fun, params, args=args)
@@ -31,8 +52,12 @@ def compute_partial_derivatives_numerical(func, parameters, args=None, step=1e-5
     return np.vstack(derivatives).sum(axis=1).reshape(parameters.shape)
 
 
-def solve(solver, loss_func, jac=None, tol=1e-5, max_iter=1000, verbose=False):
-    if solver == 'BFGS':
+def solve(solver, loss_func, jac=None, tol=1e-5, max_iter=1000, verbose=False, params=None):
+    if solver == 'GD' and core.solver_backend == 'theano':
+        fun = (loss_func, [params[0]], params[1:])
+        r = partial(gradient_descend_theano, fun, max_iter=max_iter, tol=tol, verbose=verbose)
+        return r
+    elif solver == 'BFGS':
         opts = {'disp': verbose, 'maxiter': max_iter}
         r = partial(scipy.optimize.minimize, loss_func, method='BFGS', jac=jac,
                     options=opts, tol=tol)
