@@ -108,3 +108,27 @@ def get_loss_function(loss, penalty):
     final_loss_function_der = loss_function_der + reg * penalty_function_der
     return theano.function([W, X, Y, reg], final_loss_function), theano.function([W, X, Y, reg],
                                                                                  final_loss_function_der)
+
+
+def get_loss_function_not_compiled(loss, penalty, init_params):
+    """
+    Returns loss function and loss function derivative (UNCOMPILED) composed of selected loss and penalty function.
+    Both loss_function and loss_function_derivateve input parameters are W,X,Y,reg. Where
+    W - model params vector. It is a vector obtained from matrix <#labels>X<#features>, <#features> = features size + bias
+    X - Input features as matrix <#examples>X<#features>
+    Y - Input labels as matrix <#examples>X<#labels> (one hot vector)
+    reg - regularization param manges influence of penalty function as follows:
+        final_loss_function = loss_function + reg * penalty_function
+    :param loss: 'softmax' or 'hinge'
+    :param penalty: 'L1' or 'L2'
+    :return: loss_function, loss_function_derivative (both returned objects are python functions)
+    """
+    W = theano.shared(init_params, 'W')
+    _, X, Y = _prepare_input_tensors(W)
+    W_reshaped = T.reshape(W, (-1, X.shape[1]))
+    reg = T.scalar('reg')
+    loss_function, loss_function_der = _functions[loss](W_reshaped, X, Y)
+    penalty_function, penalty_function_der = _functions[penalty](W_reshaped)
+    final_loss_function = loss_function + reg * penalty_function
+    final_loss_function_der = loss_function_der + reg * penalty_function_der
+    return final_loss_function, final_loss_function_der, (W, X, Y, reg)
