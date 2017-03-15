@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import scipy.optimize
+from functools import partial
 __author__ = 'mkopersk'
 
 
@@ -17,7 +18,7 @@ def gradient_descend(fun, x0, args=None, jac=None, learning_rate=1e-3, tol=1e-3,
             break
         old_loss = loss
         x0 -= jac(x0, *args) * learning_rate
-    return x0
+    return {'x': x0}
 
 
 def compute_partial_derivatives_numerical(func, parameters, args=None, step=1e-5):
@@ -30,14 +31,15 @@ def compute_partial_derivatives_numerical(func, parameters, args=None, step=1e-5
     return np.vstack(derivatives).sum(axis=1).reshape(parameters.shape)
 
 
-def solve(solver, loss_func, params, args=None, jac=None, tol=1e-5, max_iter=1000, verbose=False):
+def solve(solver, loss_func, jac=None, tol=1e-5, max_iter=1000, verbose=False):
     if solver == 'BFGS':
         opts = {'disp': verbose, 'maxiter': max_iter}
-        r = scipy.optimize.minimize(loss_func, params, args=args, method='BFGS', jac=jac,
-                                    options=opts, tol=tol)
-        return r['x']
+        r = partial(scipy.optimize.minimize, loss_func, method='BFGS', jac=jac,
+                    options=opts, tol=tol)
+        return r
     elif solver == 'GD':
-        r = gradient_descend(loss_func, params, args=args, jac=jac, max_iter=max_iter, tol=tol, verbose=verbose)
+        r = partial(gradient_descend, loss_func, jac=jac, max_iter=max_iter, tol=tol,
+                    verbose=verbose)
         return r
     else:
         raise ValueError('Wrong solver name')

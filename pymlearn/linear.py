@@ -32,8 +32,9 @@ def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000
     X = np.hstack([Xtr, np.ones(Xtr.shape[0]).reshape((-1, 1))])
     loss_func, loss_func_der = loss_functions.get_loss_function(loss, penalty)
     params = np.random.random((len(np.unique(Ytr)), Xtr.shape[1] + 1))
-    params_optimal = optimize.solve(solver, loss_func, params.ravel(), args=(X, Y_bin, reg), jac=loss_func_der,
+    train_fun = optimize.solve(solver, loss_func, jac=loss_func_der,
                                     tol=tol, max_iter=max_iter, verbose=verbose)
+    params_optimal = train_fun(params.ravel(), args=(X, Y_bin, reg))['x']
     params_optimal = params_optimal.reshape((len(np.unique(Ytr)), -1))
     return params_optimal
 
