@@ -24,7 +24,7 @@ def softmax_loss_derivatives(W, X, Y):
     D = np.zeros(W.shape)
     for x, y in zip(X, Y_vec):
         D += __softmax_loss_partial_derivatives__(W, x, y)
-    return D / X.shape[0]
+    return (D / X.shape[0]).ravel()
 
 
 def __softmax_loss_partial_derivatives__(W, x, y):
@@ -48,7 +48,7 @@ def hinge_loss_derivatives(W, X, Y):
     D = np.zeros(W.shape)
     for x, y in zip(X, Y_vec):
         D += __hinge_loss_partial_derivatives__(W, x, y)
-    return D / X.shape[0]
+    return (D / X.shape[0]).ravel()
 
 
 def __hinge_loss_partial_derivatives__(W, x, y):
@@ -72,19 +72,37 @@ def __hinge_loss_partial__(W, x, y):
 
 
 def l2_penalty(x):
-    return np.sum(x ** 2)
+    # x last column is a bias which we do not want do penalise
+    return np.sum(x[:, :-1] ** 2)
 
 
 def l2_penalty_der(x):
-    return 2 * x
+    # x last column is a bias which we do not want do penalise
+    x_wo_bias = np.copy(x)
+    x_wo_bias[:, -1] = 0
+    return (2 * x_wo_bias).ravel()
 
 
 def l1_penalty(x):
-    return np.sum(np.abs(x))
+    # x last column is a bias which we do not want do penalise
+    return np.sum(np.abs(x[:, :-1]))
 
 
 def l1_penalty_der(x):
     D = np.zeros(x.shape)
     D[x < 0] = -1
     D[x > 0] = 1
-    return D
+    # x last column is a bias which we do not want do penalise
+    D[:, -1] = 0
+    return D.ravel()
+
+_functions = {'softmax': (softmax_loss, softmax_loss_derivatives), 'hinge': (hinge_loss, hinge_loss_derivatives),
+             'L1': (l1_penalty, l1_penalty_der), 'L2': (l2_penalty, l2_penalty_der)}
+
+
+def get_loss_function(loss, penalty):
+    loss_fun, loss_der_fun = _functions[loss]
+    penalty_fun, penalty_der_fun = _functions[penalty]
+    final_loss = lambda W, X, Y, reg: loss_fun(W.reshape(-1, X.shape[1]), X, Y) + reg * penalty_fun(W.reshape(-1, X.shape[1]))
+    final_loss_der = lambda W, X, Y, reg: loss_der_fun(W.reshape(-1, X.shape[1]), X, Y) + reg * penalty_der_fun(W.reshape(-1, X.shape[1]))
+    return final_loss, final_loss_der
