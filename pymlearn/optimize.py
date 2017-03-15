@@ -30,13 +30,14 @@ def compute_partial_derivatives_numerical(func, parameters, args=None, step=1e-5
     return np.vstack(derivatives).sum(axis=1).reshape(parameters.shape)
 
 
-def solve(solver, loss_func, params, args=None, jac=None, tol=1e-3, max_iter=1000):
+def solve(solver, loss_func, params, args=None, jac=None, tol=1e-5, max_iter=1000, verbose=False):
     if solver == 'BFGS':
+        opts = {'disp': verbose, 'maxiter': max_iter}
         r = scipy.optimize.minimize(loss_func, params, args=args, method='BFGS', jac=jac,
-                                    options={'maxiter': max_iter}, tol=tol)
+                                    options=opts, tol=tol)
         return r['x']
     elif solver == 'GD':
-        r = gradient_descend(loss_func, params, args=args, jac=jac, max_iter=max_iter, tol=tol)
+        r = gradient_descend(loss_func, params, args=args, jac=jac, max_iter=max_iter, tol=tol, verbose=verbose)
         return r
     else:
         raise ValueError('Wrong solver name')

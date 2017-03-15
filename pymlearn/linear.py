@@ -3,7 +3,7 @@ import numpy as np
 import optimize
 import sklearn.base
 import sklearn.metrics
-import _loss_func_theano
+import loss_functions
 import theano
 
 # from IPython.core.debugger import Tracer
@@ -23,22 +23,23 @@ def classify(W, x):
     return labels
 
 
-def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS'):
+def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS',
+                    verbose=False):
     to_binary_label = sklearn.preprocessing.MultiLabelBinarizer()
     Y_bin = to_binary_label.fit_transform(Ytr[:, np.newaxis]).astype(theano.config.floatX).T
     Y_bin = Y_bin.astype(np.float32)
 
     X = np.hstack([Xtr, np.ones(Xtr.shape[0]).reshape((-1, 1))])
-    loss_func, loss_func_der = _loss_func_theano.get_loss_function(loss, penalty)
+    loss_func, loss_func_der = loss_functions.get_loss_function(loss, penalty)
     params = np.random.random((len(np.unique(Ytr)), Xtr.shape[1] + 1))
     params_optimal = optimize.solve(solver, loss_func, params.ravel(), args=(X, Y_bin, reg), jac=loss_func_der,
-                                    tol=tol, max_iter=max_iter)
+                                    tol=tol, max_iter=max_iter, verbose=verbose)
     params_optimal = params_optimal.reshape((len(np.unique(Ytr)), -1))
     return params_optimal
 
 
 class LinearClassifer(sklearn.base.BaseEstimator):
-    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS'):
+    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS', verbose=False):
         self.reg = reg
         self.loss = loss
         self.penalty = penalty
@@ -46,10 +47,11 @@ class LinearClassifer(sklearn.base.BaseEstimator):
         self.tol = tol
         self.solver = solver
         self.params = None
+        self.verbose = verbose
 
     def fit(self, X, Y):
         self.params = train_classifer(X, Y, reg=self.reg, loss=self.loss, penalty=self.penalty,
-                                      max_iter=self.max_iter, tol=self.tol, solver=self.solver)
+                                      max_iter=self.max_iter, tol=self.tol, solver=self.solver, verbose=self.verbose)
         return self
 
     def predict(self, X):
