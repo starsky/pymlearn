@@ -6,14 +6,6 @@ import sklearn.metrics
 import loss_functions
 import theano
 
-# from IPython.core.debugger import Tracer
-# import theano
-# from sklearn import datasets
-# from sklearn.metrics import accuracy_score
-# from sklearn.preprocessing import MultiLabelBinarizer
-# from sklearn.metrics import hinge_loss as hinge_loss_test
-# from scipy.optimize import minimize
-
 
 def classify(W, x):
     # add ones to make the bias trick
@@ -23,24 +15,23 @@ def classify(W, x):
     return labels
 
 
-def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS',
+def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-5, solver='BFGS',
                     verbose=False):
     to_binary_label = sklearn.preprocessing.MultiLabelBinarizer()
     Y_bin = to_binary_label.fit_transform(Ytr[:, np.newaxis]).astype(theano.config.floatX).T
     Y_bin = Y_bin.astype(np.float32)
 
     X = np.hstack([Xtr, np.ones(Xtr.shape[0]).reshape((-1, 1))])
-    loss_func, loss_func_der = loss_functions.get_loss_function(loss, penalty)
     params = np.random.random((len(np.unique(Ytr)), Xtr.shape[1] + 1))
-    train_fun = optimize.solve(solver, loss_func, jac=loss_func_der,
-                                    tol=tol, max_iter=max_iter, verbose=verbose)
+    loss_func, loss_func_der, sym_params = loss_functions.get_loss_function(loss, penalty, params)
+    train_fun = optimize.solve(solver, loss_func, jac=loss_func_der, tol=tol, max_iter=max_iter, verbose=verbose, params=sym_params)
     params_optimal = train_fun(params.ravel(), args=(X, Y_bin, reg))['x']
     params_optimal = params_optimal.reshape((len(np.unique(Ytr)), -1))
     return params_optimal
 
 
 class LinearClassifer(sklearn.base.BaseEstimator):
-    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS', verbose=False):
+    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-5, solver='BFGS', verbose=False):
         self.reg = reg
         self.loss = loss
         self.penalty = penalty

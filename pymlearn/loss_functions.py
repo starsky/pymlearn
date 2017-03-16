@@ -9,7 +9,7 @@ _available_implementations = {'theano': _loss_func_theano.get_loss_function,
                               'numpy-vectorized': _loss_func_vectorized.get_loss_function}
 
 
-def get_loss_function(loss, penalty):
+def get_loss_function(loss, penalty, init_params):
     """
     Returns loss function and loss function derivative composed of selected loss and penalty function.
     Both loss_function and loss_function_derivateve input parameters are W,X,Y,reg. Where
@@ -23,4 +23,12 @@ def get_loss_function(loss, penalty):
     :param penalty: 'L1' or 'L2'
     :return: loss_function, loss_function_derivative (both returned objects are python functions)
     """
-    return _available_implementations[core.backend](loss, penalty)
+    if core.solver_backend == 'theano':
+        return _loss_func_theano.get_loss_function_not_compiled(loss, penalty, init_params)
+    else:
+        f, f_der = _available_implementations[core.loss_backend](loss, penalty)
+        return f, f_der, None
+
+
+def get_theano_not_compiled_loss(loss, penalty, init_params):
+    return _loss_func_theano.get_loss_function_not_compiled(loss, penalty, init_params)
