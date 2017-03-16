@@ -4,16 +4,7 @@ import optimize
 import sklearn.base
 import sklearn.metrics
 import loss_functions
-import core
 import theano
-
-# from IPython.core.debugger import Tracer
-# import theano
-# from sklearn import datasets
-# from sklearn.metrics import accuracy_score
-# from sklearn.preprocessing import MultiLabelBinarizer
-# from sklearn.metrics import hinge_loss as hinge_loss_test
-# from scipy.optimize import minimize
 
 
 def classify(W, x):
@@ -24,7 +15,7 @@ def classify(W, x):
     return labels
 
 
-def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS',
+def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-5, solver='BFGS',
                     verbose=False):
     to_binary_label = sklearn.preprocessing.MultiLabelBinarizer()
     Y_bin = to_binary_label.fit_transform(Ytr[:, np.newaxis]).astype(theano.config.floatX).T
@@ -40,7 +31,7 @@ def train_classifer(Xtr, Ytr, reg=1.0, loss='hinge', penalty='L2', max_iter=2000
 
 
 class LinearClassifer(sklearn.base.BaseEstimator):
-    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-3, solver='BFGS', verbose=False):
+    def __init__(self, reg=1.0, loss='hinge', penalty='L2', max_iter=2000, tol=1e-5, solver='BFGS', verbose=False):
         self.reg = reg
         self.loss = loss
         self.penalty = penalty

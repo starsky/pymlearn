@@ -7,8 +7,8 @@ import theano
 from lasagne.updates import sgd
 __author__ = 'mkopersk'
 
-def gradient_descend_theano(fun, x0, args=None, learning_rate=1e-3, tol=1e-3, max_iter=3000, 
-        verbose=True):
+
+def gradient_descend_theano(fun, x0, args=None, learning_rate=1e-3, tol=1e-3, max_iter=3000, verbose=True):
     funct, trainable_params, non_trainable_params = fun
     updates = sgd(funct, trainable_params, learning_rate=learning_rate)
     train_fun = theano.function(non_trainable_params, funct, updates=updates)
@@ -16,12 +16,12 @@ def gradient_descend_theano(fun, x0, args=None, learning_rate=1e-3, tol=1e-3, ma
     old_loss = np.inf
     for i in range(max_iter):
         train_fun(*args)
-        curr_loss =  loss_fn_compiled(*args)
+        curr_loss = loss_fn_compiled(*args)
         if abs(curr_loss - old_loss) < tol:
             break
         old_loss = curr_loss
-        if verbose and i % 100 == 0:
-            print '%d\t%f' % (i, curr_loss)
+        _print_optimizer_iteration_info(verbose, i, old_loss)
+    _print_optimizer_final_info(verbose, i, old_loss, 'Lasagne Gradient Descend')
     params_optimal = trainable_params[0].get_value()
     return {'x': params_optimal}
 
@@ -33,13 +33,25 @@ def gradient_descend(fun, x0, args=None, jac=None, learning_rate=1e-3, tol=1e-3,
     x0 = x0.astype(np.float64)
     for i in range(max_iter):
         loss = fun(x0, *args)
-        if verbose:
-            print 'Iteration %d, loss value: %f' % (i, loss)
         if np.abs(old_loss - loss) < tol:
             break
         old_loss = loss
         x0 -= jac(x0, *args) * learning_rate
+        _print_optimizer_iteration_info(verbose, i, old_loss)
+    _print_optimizer_final_info(verbose, i, old_loss, 'Python Gradient Descend')
     return {'x': x0}
+
+
+def _print_optimizer_iteration_info(verbose, iter_num, loss_val):
+    if verbose and iter_num % 100 == 0:
+        print 'Iteration %03d:\tloss value: %f' % (iter_num, loss_val)
+
+
+def _print_optimizer_final_info(verbose, iter_num, loss_val, msg):
+    if verbose:
+        print 'Optimizer %s, converged' % msg
+        print 'Iterations count: %d' % iter_num
+        print 'Loss value: %f' % loss_val
 
 
 def compute_partial_derivatives_numerical(func, parameters, args=None, step=1e-5):
